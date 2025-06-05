@@ -18,7 +18,7 @@ def get_and_send_data():
     print("form_data", form_data)
   except requests.exceptions.RequestException as e:
     print("an error has occurred", e)
-  processed_data = process_location(form_data)
+  processed_data = process_location(form_data) #returns json
   try:
    res = requests.post(f"{domain}/uv_index", json=processed_data) #make sure route matches Next
    res.raise_for_status()
