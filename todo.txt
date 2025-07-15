@@ -1,0 +1,7 @@
+-Need to work on get_uv_index
+    -Need to get UV forecast data, need to extract just the days times (24) and just the matching uv indexes (24)
+    -need to create new dictionary or new list with each time and uv index
+    -need to return this data
+    -then in get_current_uv_index method need to loop through and find the corresponding uv index to the time from get_current_time_for_uv_index and return that, the human readable date, and time
+    -then I need to go through and loop through all of the forecast data   then need to look through and include time until you get to time above 1 and document the start uv index and stop, then once looped through all of them, convert it to human readable times
+    -then need to return the date, time, current uv index, and all the times list

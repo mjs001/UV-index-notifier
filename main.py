@@ -34,3 +34,4 @@ def get_uv_data():
 
 if __name__ == "__main__":
     app.run()
+# runs on localhost:5000
