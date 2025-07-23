@@ -1,28 +1,67 @@
+from time import strptime
 from utilities.convert_time_to_12hr import convert_time_to_12hr
 from utilities.convert_uv_time_to_hour import convert_uv_time_to_hour
 import requests
 import os
 import json
+import copy
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
-# NEED TO CHECK HOW MANY TIMESTAMPS WITH UV INDEX ARE RETURNED FROM FORECAST
+
+# use convert_time_To_12hr for current time and use convert_uv_time_to_hour for the uv index hours
 
 
-def uv_index_forecast_request(lat, lon):
-    # put actual request here so you can call it multiple times in below function
+def uv_index_forecast_request(lat, lon, timezone):
     # get uv index forecast and do res.json then convert to dictionary and return that
-    url = f"https://api.openuv.io/api/v1/forecast?lat={coordinates['lat']}&lng={coordinates['lon']}"
-    try:
-        res = requests.get(url, headers=headers)
-        res.raise_for_status()
-        uv_forecast_data = res.json()
-        print("uv forecast data", uv_forecast_data)
-        uv_forecast_data_dict = json.loads(uv_forecast_data)
-        return uv_forecast_data_dict
-    except requests.exceptions.RequestException as e:
-        print("An error occurred while retrieving UV index forecast", e)
+
+    # need to include time conversion using convert_uv_time_to_hour
+    time_res = get_current_time_for_uv_index(timezone)
+    if time_res != None:
+        datetime_formatted, human_readable_date, time = time_res
+        current_uv_index = 0
+
+        # want to remove the times and uv indexes from before the current time
+
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=uv_index&timezone=auto"
+        try:
+            res = requests.get(url)
+            res.raise_for_status()
+            uv_forecast_data = res.json()
+            uv_forecast_data_dict = json.loads(uv_forecast_data)
+            uv_forecast_data_dict_copy = copy.deepcopy(uv_forecast_data_dict)
+            relevant_data = {}
+            times = []
+            uv_indexes = []
+            hourly_raw = uv_forecast_data_dict_copy["hourly"]["time"]
+            uv_raw = uv_forecast_data_dict_copy["hourly"]["uv_index"]
+            date_str = datetime_formatted[:10]
+            removed_dates = 0
+            for h in hourly_raw:
+                found_current_hour = False
+                if datetime_formatted in h:
+                    found_current_hour = True
+                if found_current_hour == True:
+                    date = h[:10]
+                    if date_str == date:
+                        times.append(h)
+                else:
+                    removed_dates += 1
+            del uv_raw[:removed_dates]
+            del uv_raw[len(hourly_raw) :]
+            print(
+                "elements left in uv_raw after removing removed_dates num and num of length of hourly_raw",
+                uv_raw,
+            )
+            forecast_data_formatted = [
+                [individual_time, float(uv_index)]
+                for individual_time, uv_index in zip(times, uv_raw)
+            ]  # [["2025-07-20T11:00", 0.00], ...]
+            return forecast_data_formatted, human_readable_date, time
+        except requests.exceptions.RequestException as e:
+            print("An error occurred while retrieving UV index forecast", e)
 
 
 def get_current_time_for_uv_index(timezone):
@@ -39,21 +78,11 @@ def get_current_time_for_uv_index(timezone):
         time = data_dict["time"]
         # 2025-07-15T13:40:56.201195
         datetime_formatted = datetime[:13]
-        return datetime_formatted, human_readable_date, time
+        formatted_time = convert_uv_time_to_hour(time)
+        return datetime_formatted, human_readable_date, formatted_time
     except requests.exceptions.RequestException as e:
         print("An error occurred while trying to retrieve the current time and date", e)
         return None
-
-
-def get_current_uv_index(uv_forecast_data, timezone):
-    # need to include time conversion using convert_time_to_12hr
-    time_res = get_current_time_for_uv_index(timezone)
-    if time_res != None:
-        datetime_formatted, human_readable_date, time = time_res
-        current_uv_index = 0
-        return current_uv_index, human_readable_date, time
-    # return human_readable_date, time, uv_index
-    # put request for uv index here and then return the uv
 
 
 def get_uv_index(location_data):
@@ -61,10 +90,12 @@ def get_uv_index(location_data):
     lat = location_data_dict["lat"]
     lon = location_data_dict["lon"]
     timezone = location_data_dict["timezone"]
-    uv_forecast_data = uv_index_forecast_request(lat, lon)
-    # human_readable_date, time, uv_index = get_current_uv_index(
-    #   uv_forecast_data, timezone
-    # )
+    uv_forecast_data, current_date, current_time = uv_index_forecast_request(
+        lat, lon, timezone
+    )
+    current_uv_index = int(uv_forecast_data[0][1])
+    low_uv_start_time = ""
+    low_uv_end_time = ""
 
     # the coordinates are going to be a dictionary of lat and lon
     # the idea is to make the request with uv_index_request with the coordinates
