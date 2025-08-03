@@ -11,20 +11,14 @@ from datetime import datetime
 
 load_dotenv()
 
-
 # use convert_time_To_12hr for current time and use convert_uv_time_to_hour for the uv index hours
 
 
 def uv_index_forecast_request(lat, lon, timezone):
-    # get uv index forecast and do res.json then convert to dictionary and return that
-
-    # need to include time conversion using convert_uv_time_to_hour
     time_res = get_current_time_for_uv_index(timezone)
     if time_res != None:
         datetime_formatted, human_readable_date, time = time_res
         current_uv_index = 0
-
-        # want to remove the times and uv indexes from before the current time
 
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=uv_index&timezone=auto"
         try:
@@ -33,9 +27,7 @@ def uv_index_forecast_request(lat, lon, timezone):
             uv_forecast_data = res.json()
             uv_forecast_data_dict = json.loads(uv_forecast_data)
             uv_forecast_data_dict_copy = copy.deepcopy(uv_forecast_data_dict)
-            relevant_data = {}
             times = []
-            uv_indexes = []
             hourly_raw = uv_forecast_data_dict_copy["hourly"]["time"]
             uv_raw = uv_forecast_data_dict_copy["hourly"]["uv_index"]
             uv_raw_copy = copy.deepcopy(uv_raw)
@@ -61,6 +53,7 @@ def uv_index_forecast_request(lat, lon, timezone):
                 [individual_time, float(uv_index)]
                 for individual_time, uv_index in zip(times, uv_raw_copy)
             ]  # [["2025-07-20T11:00", 0.00], ...]
+
             # get 12am next day
             next_day = get_next_days_date_formatted(date_str)
             next_day_formatted = f"{next_day}T00:00"
@@ -69,7 +62,6 @@ def uv_index_forecast_request(lat, lon, timezone):
                 next_day_index = hourly_raw.index(next_day_formatted)
             else:
                 print("Date does not exist in data.")
-            # 2025-07-16T08:00
             next_day_uv = uv_raw[next_day_index]
             forecast_data_formatted.append([next_day_formatted, float(next_day_uv)])
             return forecast_data_formatted, human_readable_date, time
@@ -78,8 +70,6 @@ def uv_index_forecast_request(lat, lon, timezone):
 
 
 def get_current_time_for_uv_index(timezone):
-    # need to make a request to https://timeapi.io/api/time/current/zone?timeZone=America/Chicago
-    # return date, time
     url = f"https://timeapi.io/api/time/current/zone?timeZone={timezone}"
     try:
         res = requests.get(url)
@@ -120,7 +110,6 @@ def get_uv_index(location_data):
                 )
                 low_uv_start_time = ""
 
-                # PICK UP HERE
     return {
         "uv_index_forecast": low_uv_time_blocks,
         "current_time": current_time,
