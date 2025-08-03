@@ -1,6 +1,7 @@
 from time import strptime
 from utilities.convert_time_to_12hr import convert_time_to_12hr
 from utilities.convert_uv_time_to_hour import convert_uv_time_to_hour
+from utilities.get_next_days_date_formatted import get_next_days_date_formatted
 import requests
 import os
 import json
@@ -37,10 +38,11 @@ def uv_index_forecast_request(lat, lon, timezone):
             uv_indexes = []
             hourly_raw = uv_forecast_data_dict_copy["hourly"]["time"]
             uv_raw = uv_forecast_data_dict_copy["hourly"]["uv_index"]
+            uv_raw_copy = copy.deepcopy(uv_raw)
             date_str = datetime_formatted[:10]
             removed_dates = 0
+            found_current_hour = False
             for h in hourly_raw:
-                found_current_hour = False
                 if datetime_formatted in h:
                     found_current_hour = True
                 if found_current_hour == True:
@@ -49,16 +51,27 @@ def uv_index_forecast_request(lat, lon, timezone):
                         times.append(h)
                 else:
                     removed_dates += 1
-            del uv_raw[:removed_dates]
-            del uv_raw[len(hourly_raw) :]
+            del uv_raw_copy[:removed_dates]
+            del uv_raw_copy[len(times) :]
             print(
                 "elements left in uv_raw after removing removed_dates num and num of length of hourly_raw",
-                uv_raw,
+                uv_raw_copy,
             )
             forecast_data_formatted = [
                 [individual_time, float(uv_index)]
-                for individual_time, uv_index in zip(times, uv_raw)
+                for individual_time, uv_index in zip(times, uv_raw_copy)
             ]  # [["2025-07-20T11:00", 0.00], ...]
+            # get 12am next day
+            next_day = get_next_days_date_formatted(date_str)
+            next_day_formatted = f"{next_day}T00:00"
+            next_day_index = 0
+            if next_day_formatted in hourly_raw:
+                next_day_index = hourly_raw.index(next_day_formatted)
+            else:
+                print("Date does not exist in data.")
+            # 2025-07-16T08:00
+            next_day_uv = uv_raw[next_day_index]
+            forecast_data_formatted.append([next_day_formatted, float(next_day_uv)])
             return forecast_data_formatted, human_readable_date, time
         except requests.exceptions.RequestException as e:
             print("An error occurred while retrieving UV index forecast", e)
@@ -95,8 +108,24 @@ def get_uv_index(location_data):
     )
     current_uv_index = int(uv_forecast_data[0][1])
     low_uv_start_time = ""
-    low_uv_end_time = ""
+    low_uv_time_blocks = []
+    for uv_data in uv_forecast_data:
+        if uv_data[1] <= 1:
+            if low_uv_start_time == "":
+                low_uv_start_time = convert_uv_time_to_hour(uv_data[0])
+        else:
+            if low_uv_start_time != "":
+                low_uv_time_blocks.append(
+                    f"{low_uv_start_time} - {convert_uv_time_to_hour(uv_data[0])}"
+                )
+                low_uv_start_time = ""
 
+                # PICK UP HERE
+    return {
+        "uv_index_forecast": low_uv_time_blocks,
+        "current_time": current_time,
+        "current_date": current_date,
+    }
     # the coordinates are going to be a dictionary of lat and lon
     # the idea is to make the request with uv_index_request with the coordinates
     # make a while loop with a var called is_not_all_24_hours or something like that that will be true or false depending on if the last elements uv_time has 23 as the hour of the same date or is greater than current dates date.
