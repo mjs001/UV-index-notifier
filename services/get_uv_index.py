@@ -24,8 +24,7 @@ def uv_index_forecast_request(lat, lon, timezone):
             res = requests.get(url)
             res.raise_for_status()
             uv_forecast_data = res.json()
-            uv_forecast_data_dict = json.loads(uv_forecast_data)
-            uv_forecast_data_dict_copy = copy.deepcopy(uv_forecast_data_dict)
+            uv_forecast_data_dict_copy = copy.deepcopy(uv_forecast_data)
             times = []
             hourly_raw = uv_forecast_data_dict_copy["hourly"]["time"]
             uv_raw = uv_forecast_data_dict_copy["hourly"]["uv_index"]
@@ -44,10 +43,10 @@ def uv_index_forecast_request(lat, lon, timezone):
                     removed_dates += 1
             del uv_raw_copy[:removed_dates]
             del uv_raw_copy[len(times) :]
-            print(
-                "elements left in uv_raw after removing removed_dates num and num of length of hourly_raw",
-                uv_raw_copy,
-            )
+            # print(
+            #     "elements left in uv_raw after removing removed_dates num and num of length of hourly_raw",
+            #     uv_raw_copy,
+            # )
             forecast_data_formatted = [
                 [individual_time, float(uv_index)]
                 for individual_time, uv_index in zip(times, uv_raw_copy)
@@ -74,13 +73,12 @@ def get_current_time_for_uv_index(timezone):
         res = requests.get(url)
         res.raise_for_status()
         data = res.json()
-        data_dict = json.loads(data)
-        human_readable_date = data_dict["date"]
-        datetime = data_dict["dateTime"]
-        time = data_dict["time"]
+        human_readable_date = data["date"]
+        datetime = data["dateTime"]
+        time = data["time"]
         # 2025-07-15T13:40:56.201195
         datetime_formatted = datetime[:13]
-        formatted_time = convert_uv_time_to_hour(time)
+        formatted_time = convert_time_to_12hr(time)
         return datetime_formatted, human_readable_date, formatted_time
     except requests.exceptions.RequestException as e:
         print("An error occurred while trying to retrieve the current time and date", e)
@@ -88,7 +86,7 @@ def get_current_time_for_uv_index(timezone):
 
 
 def get_uv_index(location_data):
-    location_data_dict = json.loads(location_data)
+    location_data_dict = location_data
     lat = location_data_dict["lat"]
     lon = location_data_dict["lon"]
     timezone = location_data_dict["timezone"]
@@ -109,10 +107,17 @@ def get_uv_index(location_data):
                 )
                 low_uv_start_time = ""
 
+    # Ensure the last block is appended if it runs to the end
+    if low_uv_start_time != "":
+        low_uv_time_blocks.append(
+            f"{low_uv_start_time} - {convert_uv_time_to_hour(uv_forecast_data[-1][0])}"
+        )
+
     return {
         "uv_index_forecast": low_uv_time_blocks,
         "current_time": current_time,
         "current_date": current_date,
+        "current_uv_index": current_uv_index,
     }
 
 
