@@ -1,34 +1,20 @@
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
 import requests
+from werkzeug.exceptions import BadRequest
 from utilities.determine_env import determine_env
-from process_location import process_location
+from services.get_uv_index import get_uv_index
 
 
 app = Flask(__name__)
 
 
-@app.route("/get_uv_data")  # make sure matches Next
-def get_uv_data():
-    env = determine_env()
-    domain = "localhost:3000" if env == "development" else ""  # need to fill in
-    url = f"{domain}/location"  # make sure it matches route in Next
+@app.route("/get_uv_data", methods=["POST"])  # make sure matches Next
+async def get_uv_data():
     try:
-        res = requests.get(url)
-        res.raise_for_status()
-        location_data = res.json()
-        print("location data", location_data)
-
-    except requests.exceptions.RequestException as e:
-        print("an error has occurred", e)
-    processed_data = jsonify(process_location(location_data))
-    # try:
-    #     res = requests.post(
-    #         f"{domain}/uv_index", json=processed_data
-    #     )  # make sure route matches Next
-    #     res.raise_for_status()
-    #     print("post for uv_index", res.json())
-    # except requests.exceptions.RequestException as e:
-    #     print("an error has occurred", e)
+        data = request.get_json(silent=False)
+    except BadRequest as e:
+        return jsonify({"error": str(e.description)})
+    processed_data = await jsonify(get_uv_index(data))
     return processed_data
 
 

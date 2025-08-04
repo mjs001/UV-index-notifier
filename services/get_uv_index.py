@@ -3,7 +3,6 @@ from utilities.convert_time_to_12hr import convert_time_to_12hr
 from utilities.convert_uv_time_to_hour import convert_uv_time_to_hour
 from utilities.get_next_days_date_formatted import get_next_days_date_formatted
 import requests
-import os
 import json
 import copy
 from dotenv import load_dotenv
@@ -115,29 +114,6 @@ def get_uv_index(location_data):
         "current_time": current_time,
         "current_date": current_date,
     }
-    # the coordinates are going to be a dictionary of lat and lon
-    # the idea is to make the request with uv_index_request with the coordinates
-    # make a while loop with a var called is_not_all_24_hours or something like that that will be true or false depending on if the last elements uv_time has 23 as the hour of the same date or is greater than current dates date.
-    # then that data will be json and you will want to loop through it and check if current uv is above or below 1
-    # then if it is below 1, save in dictionary with uv_time low_uv see if next val is still below 1 if it is do convert_24hr on the uv_time and add that time and uv to low_uv and continue until hitting above or at 1.
-    # once you have that, push that dictionary (low_uv) to low_uv_times which is a list that will hold a dictionary for each block of time the uv index was under 1. then set low_uv to a empty dictionary.
-    # if on last element, check if uv_time is same date at 23 hour or the date is greater than current date.
-
-    # get date from uv index request, cant see what it is currently due to max requests being made, save that in var, then check if last element has date that is greater than the uv index date var or is 23 hour of same date. If it is neither, make another request with date field filled out, but double check it in Postman and see if this is necessary if it returns the whole days worth then it isnt necessary.
-
-    # if it is then the var is True and you return element
-    # if it is False break the loop and you then take the low_uv_times, loop through each one make a list take the time of the first low_uv entry in dictionary then add a dash and then go to last entry. ex: "10 AM - 1 PM" push that to a list called formatted_low_uv_times.
-    # If the dictionary only holds one entry, then you need to just push that one entry "10 AM".
-    # make dictionary with current_uv as a key and insert current uv
-    # Then make a dictionary with low_uv_timeblocks as key and formatted_low_uv_times as value.
-
-    # make sure to convert the date time with convert_timestamp and add that to the raw dict
-    # return raw dictionary so it can be converted in main.py
-
-    # convert low_uv_timeblocks into json with json.dumps(low_uv_timeblocks)
-    # return low_uv_timeblocks json
-
-    # ex return {date_time: ""}
 
 
 # if __name__ == "__main__":
