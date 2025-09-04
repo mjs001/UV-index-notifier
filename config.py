@@ -15,7 +15,7 @@ class Config:
     ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 
     # Request Configuration
-    REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 30))
+    REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 120))
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
 
     # Logging
